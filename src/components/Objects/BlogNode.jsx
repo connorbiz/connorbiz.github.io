@@ -11,15 +11,18 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
     const setActiveNode = useStore(state => state.setActiveTerminal)
     const isActive = activeNodeId === nodeId
 
-    // Poincaré Scaling
+    // Poincaré Scaling - more dramatic falloff with distance
     const VISUAL_SCALE = 10
     const unitPos = position.clone().divideScalar(VISUAL_SCALE)
     const r = unitPos.length()
     const rClamped = Math.min(r, 0.99)
-    const scaleFactor = (1 - rClamped * rClamped) * 2.0
+
+    // Cubic falloff for more dramatic size change
+    const hyperbolicFactor = 1 - rClamped * rClamped
+    const scaleFactor = Math.pow(hyperbolicFactor, 1.8) * 2.5
 
     // Don't render if too small
-    if (scaleFactor < 0.08) return null
+    if (scaleFactor < 0.05) return null
 
     // Category colors - soft pastels
     const categoryColors = {
