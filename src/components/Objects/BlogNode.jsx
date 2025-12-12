@@ -94,8 +94,6 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
                     anchorX="center"
                     anchorY="middle"
                     maxWidth={2}
-                    font="/fonts/inter-medium.woff"
-                    fontWeight="bold"
                 >
                     {title}
                 </Text>
