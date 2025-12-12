@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'claude/**'
-
 permissions:
   contents: read
   pages: write
