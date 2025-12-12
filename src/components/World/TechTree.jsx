@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { generateH3Layout, mobiusAdd } from '../../math/hyperbolic'
-import { TechNode } from '../Objects/TechNode'
+import { TerminalNode } from '../Objects/TerminalNode'
 import { useStore } from '../../store/useStore'
 import * as THREE from 'three'
 
@@ -79,12 +79,13 @@ export function TechTree() {
         <group>
             {/* Nodes */}
             {transformedNodes.map(node => (
-                <TechNode
+                <TerminalNode
                     key={node.id}
+                    nodeId={node.id}
                     position={node.transformedPos.clone().multiplyScalar(VISUAL_SCALE)}
                     label={node.label}
                     level={node.level}
-                    onClick={() => handleNodeClick(node)} // Pass full node object
+                    onNavigate={() => handleNodeClick(node)}
                 />
             ))}
 
