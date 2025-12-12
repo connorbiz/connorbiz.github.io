@@ -134,14 +134,14 @@ export function BlogSpace() {
                 currentOrigin.copy(targetOrigin.current)
                 isAnimating.current = false
 
-                // Camera arrived - show article with slight delay for drama
+                // Ease camera back out slightly
+                targetCameraY.current = 12
+
+                // Camera arrived - wait for settle then show article
                 setCameraAnimating(false)
                 setTimeout(() => {
                     setShowArticle(true)
-                }, 200)
-
-                // Ease camera back out slightly
-                targetCameraY.current = 12
+                }, 600)  // Longer delay to let camera settle
             }
 
             setCurrentOrigin(currentOrigin.clone())
