@@ -1,13 +1,11 @@
-import { useRef, useState, useMemo } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
-import { Text, Html } from '@react-three/drei'
+import { useRef, useState } from 'react'
+import { Text } from '@react-three/drei'
 import { useStore } from '../../store/useStore'
 import * as THREE from 'three'
 
 export function BlogNode({ position, title, excerpt, category, nodeId, onNavigate, isCenter }) {
     const groupRef = useRef()
     const [hovered, setHover] = useState(false)
-    const { camera } = useThree()
 
     const activeNodeId = useStore(state => state.activeTerminalId)
     const setActiveNode = useStore(state => state.setActiveTerminal)
@@ -18,30 +16,33 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
     const unitPos = position.clone().divideScalar(VISUAL_SCALE)
     const r = unitPos.length()
     const rClamped = Math.min(r, 0.99)
-    const scaleFactor = (1 - rClamped * rClamped) * 1.5
+    const scaleFactor = (1 - rClamped * rClamped) * 2.0
 
     // Don't render if too small
-    if (scaleFactor < 0.05) return null
+    if (scaleFactor < 0.08) return null
 
     // Category colors - soft pastels
     const categoryColors = {
-        'fundamentals': '#E8D5B7',    // warm beige
-        'hardware': '#B7D5E8',         // soft blue
-        'software': '#D5E8B7',         // soft green
-        'networking': '#E8B7D5',       // soft pink
-        'memory': '#D5B7E8',           // soft purple
-        'default': '#F5F5F0'           // cream
+        'fundamentals': '#FFFEF5',    // warm white
+        'hardware': '#F5FAFF',         // cool white
+        'software': '#F5FFF5',         // mint white
+        'networking': '#FFF5FA',       // pink white
+        'memory': '#FAF5FF',           // lavender white
+        'default': '#FFFFFF'           // pure white
     }
 
-    const color = categoryColors[category] || categoryColors.default
-    const textColor = '#2C2C2C'
+    const accentColors = {
+        'fundamentals': '#D4A574',    // warm brown
+        'hardware': '#5B8FB9',         // blue
+        'software': '#7AB97A',         // green
+        'networking': '#B97A9E',       // pink
+        'memory': '#9E7AB9',           // purple
+        'default': '#888888'
+    }
 
-    // Billboard effect - face camera
-    useFrame(() => {
-        if (groupRef.current) {
-            groupRef.current.lookAt(camera.position)
-        }
-    })
+    const bgColor = categoryColors[category] || categoryColors.default
+    const accentColor = accentColors[category] || accentColors.default
+    const textColor = '#1a1a1a'
 
     const handleClick = (e) => {
         e.stopPropagation()
@@ -51,87 +52,124 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
         setActiveNode(nodeId)
     }
 
+    // Page dimensions - larger, more like a webpage
+    const pageWidth = 3.5
+    const pageHeight = 4.5
+
     return (
-        <group position={position} scale={scaleFactor} ref={groupRef}>
-            {/* Paper card background */}
+        <group
+            position={position}
+            scale={scaleFactor}
+            ref={groupRef}
+            rotation={[-Math.PI / 2, 0, 0]}  // Lay flat, facing up
+        >
+            {/* Main page background */}
             <mesh
                 onClick={handleClick}
                 onPointerOver={() => setHover(true)}
                 onPointerOut={() => setHover(false)}
             >
-                <planeGeometry args={[2.4, 1.6]} />
+                <planeGeometry args={[pageWidth, pageHeight]} />
                 <meshBasicMaterial
-                    color={hovered ? '#FFFFFF' : color}
+                    color={hovered ? '#FFFFFF' : bgColor}
                     transparent
-                    opacity={isActive ? 1 : 0.92}
+                    opacity={isActive ? 1 : 0.95}
                     side={THREE.DoubleSide}
                 />
             </mesh>
 
-            {/* Card border/shadow */}
-            <mesh position={[0.03, -0.03, -0.01]}>
-                <planeGeometry args={[2.4, 1.6]} />
+            {/* Shadow/depth */}
+            <mesh position={[0.05, -0.05, -0.02]}>
+                <planeGeometry args={[pageWidth, pageHeight]} />
                 <meshBasicMaterial
-                    color="#00000022"
+                    color="#000000"
                     transparent
-                    opacity={0.15}
+                    opacity={0.08}
                     side={THREE.DoubleSide}
                 />
             </mesh>
 
-            {/* Category indicator line */}
-            <mesh position={[-1.1, 0, 0.01]}>
-                <planeGeometry args={[0.08, 1.4]} />
-                <meshBasicMaterial color={categoryColors[category] || '#888'} />
+            {/* Top accent bar */}
+            <mesh position={[0, pageHeight/2 - 0.15, 0.01]}>
+                <planeGeometry args={[pageWidth, 0.25]} />
+                <meshBasicMaterial color={accentColor} />
             </mesh>
 
-            {/* Title */}
+            {/* Category label in accent bar */}
             {scaleFactor > 0.15 && (
                 <Text
-                    position={[0, 0.45, 0.02]}
-                    fontSize={0.18}
-                    color={textColor}
-                    anchorX="center"
+                    position={[-pageWidth/2 + 0.3, pageHeight/2 - 0.15, 0.02]}
+                    fontSize={0.12}
+                    color="#FFFFFF"
+                    anchorX="left"
                     anchorY="middle"
-                    maxWidth={2}
-                >
-                    {title}
-                </Text>
-            )}
-
-            {/* Excerpt - only show when close enough */}
-            {scaleFactor > 0.3 && (
-                <Text
-                    position={[0, -0.1, 0.02]}
-                    fontSize={0.11}
-                    color="#666666"
-                    anchorX="center"
-                    anchorY="middle"
-                    maxWidth={2}
-                    lineHeight={1.4}
-                >
-                    {excerpt}
-                </Text>
-            )}
-
-            {/* Category tag */}
-            {scaleFactor > 0.2 && (
-                <Text
-                    position={[0, -0.6, 0.02]}
-                    fontSize={0.08}
-                    color="#999999"
-                    anchorX="center"
-                    anchorY="middle"
+                    letterSpacing={0.05}
                 >
                     {category?.toUpperCase() || 'ARTICLE'}
                 </Text>
             )}
 
-            {/* Active indicator ring */}
+            {/* Title */}
+            {scaleFactor > 0.12 && (
+                <Text
+                    position={[0, pageHeight/2 - 0.7, 0.02]}
+                    fontSize={0.28}
+                    color={textColor}
+                    anchorX="center"
+                    anchorY="top"
+                    maxWidth={pageWidth - 0.5}
+                    textAlign="center"
+                    lineHeight={1.2}
+                >
+                    {title}
+                </Text>
+            )}
+
+            {/* Divider line */}
+            <mesh position={[0, pageHeight/2 - 1.4, 0.01]}>
+                <planeGeometry args={[pageWidth - 1, 0.01]} />
+                <meshBasicMaterial color={accentColor} transparent opacity={0.3} />
+            </mesh>
+
+            {/* Excerpt/content */}
+            {scaleFactor > 0.2 && (
+                <Text
+                    position={[-pageWidth/2 + 0.4, pageHeight/2 - 1.7, 0.02]}
+                    fontSize={0.14}
+                    color="#444444"
+                    anchorX="left"
+                    anchorY="top"
+                    maxWidth={pageWidth - 0.8}
+                    lineHeight={1.6}
+                    textAlign="left"
+                >
+                    {excerpt}
+                </Text>
+            )}
+
+            {/* Click indicator / Read more */}
+            {scaleFactor > 0.25 && (
+                <Text
+                    position={[0, -pageHeight/2 + 0.4, 0.02]}
+                    fontSize={0.1}
+                    color={accentColor}
+                    anchorX="center"
+                    anchorY="middle"
+                >
+                    {isActive ? '● READING' : '○ CLICK TO READ'}
+                </Text>
+            )}
+
+            {/* Active border glow */}
             {isActive && (
-                <mesh position={[0, 0, -0.02]}>
-                    <ringGeometry args={[1.35, 1.4, 32]} />
-                    <meshBasicMaterial color="#2C2C2C" transparent opacity={0.3} />
+                <mesh position={[0, 0, -0.01]}>
+                    <planeGeometry args={[pageWidth + 0.15, pageHeight + 0.15]} />
+                    <meshBasicMaterial
+                        color={accentColor}
+                        transparent
+                        opacity={0.4}
+                        side={THREE.DoubleSide}
+                    />
                 </mesh>
             )}
         </group>
