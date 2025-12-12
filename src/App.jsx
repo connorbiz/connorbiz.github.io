@@ -1,35 +1,33 @@
 import { Canvas } from '@react-three/fiber'
-import { Stats, FlyControls } from '@react-three/drei'
-import { HyperbolicSpace } from './components/World/HyperbolicSpace'
-import { Level } from './components/World/Level'
-import { TabletHUD } from './components/UI/TabletHUD'
+import { OrbitControls } from '@react-three/drei'
+import { BlogSpace } from './components/World/BlogSpace'
 import { useStore } from './store/useStore'
 
 function App() {
     const isTerminalFocused = useStore(state => state.isTerminalFocused)
 
     return (
-        <Canvas camera={{ position: [0, 0, 0.1], fov: 90 }}>
-            <color attach="background" args={['#000000']} />
+        <Canvas camera={{ position: [0, 0, 0.1], fov: 75 }}>
+            {/* Clean paper background */}
+            <color attach="background" args={['#F8F6F1']} />
 
-            {/* Lighting */}
-            <ambientLight intensity={0.5} color="#00ff00" />
-            <pointLight position={[0, 0, 0]} intensity={2} color="#ffffff" distance={20} />
+            {/* Soft, even lighting */}
+            <ambientLight intensity={0.9} color="#ffffff" />
+            <directionalLight position={[5, 5, 5]} intensity={0.3} color="#ffffff" />
+            <directionalLight position={[-5, -5, -5]} intensity={0.2} color="#E8E4DF" />
 
-            {/* World */}
-            <HyperbolicSpace />
-            <Level />
+            {/* Blog World */}
+            <BlogSpace />
 
-            {/* UI Overlay */}
-            <TabletHUD />
-
-            {/* Controls - FlyControls for free navigation inside the sphere */}
-            {/* Disable controls when terminal is focused */}
+            {/* Controls - Orbit only, no zoom/pan, just rotation */}
             {!isTerminalFocused && (
-                <FlyControls movementSpeed={2} rollSpeed={0.5} dragToLook={true} />
+                <OrbitControls
+                    enableZoom={false}
+                    enablePan={false}
+                    rotateSpeed={0.5}
+                    target={[0, 0, 0]}
+                />
             )}
-
-            <Stats />
         </Canvas>
     )
 }
