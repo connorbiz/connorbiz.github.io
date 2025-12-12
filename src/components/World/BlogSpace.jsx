@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef, useEffect } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { mobiusAdd } from '../../math/hyperbolic'
 import { BlogNode } from '../Objects/BlogNode'
 import { blogPosts } from '../../data/blogPosts'
@@ -35,16 +35,13 @@ function generateBlogLayout(posts) {
     for (let level = 1; level <= maxLevel; level++) {
         const levelPosts = byLevel[level] || []
         const count = levelPosts.length
-        const stepDist = 0.35 + level * 0.08 // Increase distance per level
+        const stepDist = 0.35 + level * 0.08
 
-        // Fibonacci sphere distribution for even spacing
         const phi = Math.PI * (3 - Math.sqrt(5))
 
         levelPosts.forEach((post, i) => {
-            // Find parent (connected node at lower level)
             let parentPos = new THREE.Vector3(0, 0, 0)
 
-            // Look for a connection to a lower level
             const parentId = posts.find(p =>
                 p.level < level && p.connections?.includes(post.id)
             )?.id
@@ -53,19 +50,15 @@ function generateBlogLayout(posts) {
                 parentPos = positionMap.get(parentId)
             }
 
-            // Generate position on sphere
             const t = i / Math.max(count - 1, 1)
             const y = 1 - t * 2
             const radius = Math.sqrt(1 - y * y)
-            const theta = phi * i + level * 1.5 // Rotate each level
+            const theta = phi * i + level * 1.5
 
             const x = Math.cos(theta) * radius
             const z = Math.sin(theta) * radius
 
-            // Local position
             const localPos = new THREE.Vector3(x, y, z).multiplyScalar(stepDist)
-
-            // Transform to parent's frame via Mobius addition
             const globalPos = mobiusAdd(localPos, parentPos)
 
             positionMap.set(post.id, globalPos)
@@ -76,7 +69,6 @@ function generateBlogLayout(posts) {
         })
     }
 
-    // Generate links from connections
     posts.forEach(post => {
         post.connections?.forEach(targetId => {
             if (positionMap.has(targetId)) {
@@ -90,34 +82,73 @@ function generateBlogLayout(posts) {
 
 export function BlogSpace() {
     const { nodes, links } = useMemo(() => generateBlogLayout(blogPosts), [])
+    const { camera } = useThree()
 
     const currentOrigin = useStore(state => state.currentOrigin || new THREE.Vector3(0, 0, 0))
     const setCurrentOrigin = useStore(state => state.setCurrentOrigin)
     const setCurrentNode = useStore(state => state.setCurrentNode)
+    const setCameraAnimating = useStore(state => state.setCameraAnimating)
+    const setShowArticle = useStore(state => state.setShowArticle)
+    const setActiveTerminal = useStore(state => state.setActiveTerminal)
 
     // Animation state
     const targetOrigin = useRef(new THREE.Vector3(0, 0, 0))
     const isAnimating = useRef(false)
+    const targetCameraY = useRef(15)
+    const animationProgress = useRef(0)
 
-    // Handle click: Navigate to node
+    // Handle click: Navigate to node with cinematic camera
     const handleNodeClick = (node) => {
         targetOrigin.current.copy(node.pos)
         isAnimating.current = true
+        animationProgress.current = 0
+
+        // Hide article during transition
+        setShowArticle(false)
+        setCameraAnimating(true)
         setCurrentNode(node)
+        setActiveTerminal(node.id)
+
+        // Zoom camera closer during animation
+        targetCameraY.current = 8
     }
 
-    // Animation Loop - smooth navigation
+    // Animation Loop - cinematic camera movement
     useFrame((state, delta) => {
         if (isAnimating.current) {
-            const step = delta * 3.0 // Smooth speed
-            currentOrigin.lerp(targetOrigin.current, step)
+            animationProgress.current += delta
 
-            if (currentOrigin.distanceTo(targetOrigin.current) < 0.001) {
+            // Smooth hyperbolic space navigation
+            const navSpeed = delta * 2.5
+            currentOrigin.lerp(targetOrigin.current, navSpeed)
+
+            // Cinematic camera swoop
+            const camSpeed = delta * 3.0
+            camera.position.y += (targetCameraY.current - camera.position.y) * camSpeed
+
+            // Check if animation is complete
+            const distanceToTarget = currentOrigin.distanceTo(targetOrigin.current)
+            const cameraArrived = Math.abs(camera.position.y - targetCameraY.current) < 0.1
+
+            if (distanceToTarget < 0.01 && cameraArrived) {
                 currentOrigin.copy(targetOrigin.current)
                 isAnimating.current = false
+
+                // Camera arrived - show article with slight delay for drama
+                setCameraAnimating(false)
+                setTimeout(() => {
+                    setShowArticle(true)
+                }, 200)
+
+                // Ease camera back out slightly
+                targetCameraY.current = 12
             }
 
             setCurrentOrigin(currentOrigin.clone())
+        } else {
+            // Gentle camera drift back to default height when not animating
+            const driftSpeed = delta * 1.5
+            camera.position.y += (targetCameraY.current - camera.position.y) * driftSpeed
         }
     })
 
@@ -142,7 +173,7 @@ export function BlogSpace() {
                     color="#E8E4DF"
                     wireframe={true}
                     transparent
-                    opacity={0.08}
+                    opacity={0.06}
                 />
             </mesh>
 
@@ -175,7 +206,7 @@ export function BlogSpace() {
 
                 return (
                     <line key={i} geometry={lineGeometry}>
-                        <lineBasicMaterial color="#D0CBC4" transparent opacity={0.25} />
+                        <lineBasicMaterial color="#D0CBC4" transparent opacity={0.2} />
                     </line>
                 )
             })}

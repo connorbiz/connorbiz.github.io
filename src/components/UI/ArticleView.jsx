@@ -3,9 +3,12 @@ import { blogPosts } from '../../data/blogPosts'
 
 export function ArticleView() {
     const currentNode = useStore(state => state.currentNode)
+    const showArticle = useStore(state => state.showArticle)
     const setCurrentNode = useStore(state => state.setCurrentNode)
     const setActiveTerminal = useStore(state => state.setActiveTerminal)
+    const setShowArticle = useStore(state => state.setShowArticle)
 
+    // Don't render if no node selected
     if (!currentNode) return null
 
     // Find the full post data
@@ -17,13 +20,17 @@ export function ArticleView() {
     ).filter(Boolean) || []
 
     const handleClose = () => {
-        setCurrentNode(null)
-        setActiveTerminal(null)
+        setShowArticle(false)
+        setTimeout(() => {
+            setCurrentNode(null)
+            setActiveTerminal(null)
+        }, 300)
     }
 
     const handleLinkClick = (linkedPost) => {
-        setCurrentNode(linkedPost)
-        setActiveTerminal(linkedPost.id)
+        // Trigger new navigation - BlogSpace will handle the animation
+        setShowArticle(false)
+        // The BlogNode click will handle the rest
     }
 
     const categoryColors = {
@@ -38,7 +45,11 @@ export function ArticleView() {
     const accentColor = categoryColors[post.category] || categoryColors.default
 
     return (
-        <div style={styles.overlay}>
+        <div style={{
+            ...styles.overlay,
+            transform: showArticle ? 'translateX(0)' : 'translateX(100%)',
+            opacity: showArticle ? 1 : 0,
+        }}>
             <div style={styles.article}>
                 {/* Header */}
                 <div style={{...styles.header, borderColor: accentColor}}>
@@ -84,21 +95,21 @@ export function ArticleView() {
                 {connections.length > 0 && (
                     <div style={styles.connections}>
                         <h3 style={styles.connectionsTitle}>Connected Concepts</h3>
+                        <p style={styles.connectionsHint}>Click a node in the space to navigate</p>
                         <div style={styles.linkGrid}>
                             {connections.map(linked => (
-                                <button
+                                <div
                                     key={linked.id}
                                     style={{
                                         ...styles.linkBtn,
                                         borderColor: categoryColors[linked.category] || '#ccc'
                                     }}
-                                    onClick={() => handleLinkClick(linked)}
                                 >
                                     <span style={styles.linkCategory}>
                                         {linked.category?.toUpperCase()}
                                     </span>
                                     <span style={styles.linkTitle}>{linked.title}</span>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -116,20 +127,21 @@ const styles = {
         width: '420px',
         height: '100vh',
         backgroundColor: '#FAFAF8',
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
+        boxShadow: '-4px 0 30px rgba(0,0,0,0.15)',
         overflowY: 'auto',
         zIndex: 1000,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease',
     },
     article: {
-        padding: '24px 28px',
+        padding: '32px 32px',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingBottom: '16px',
-        marginBottom: '20px',
+        marginBottom: '24px',
         borderBottom: '2px solid',
     },
     category: {
@@ -140,52 +152,53 @@ const styles = {
     closeBtn: {
         background: 'none',
         border: 'none',
-        fontSize: '18px',
+        fontSize: '20px',
         cursor: 'pointer',
         color: '#999',
         padding: '4px 8px',
+        transition: 'color 0.15s ease',
     },
     title: {
-        fontSize: '28px',
+        fontSize: '32px',
         fontWeight: '700',
         color: '#1a1a1a',
-        lineHeight: '1.2',
-        marginBottom: '24px',
+        lineHeight: '1.15',
+        marginBottom: '28px',
         letterSpacing: '-0.02em',
     },
     content: {
         color: '#333',
-        lineHeight: '1.7',
+        lineHeight: '1.75',
     },
     para: {
         fontSize: '16px',
-        marginBottom: '16px',
+        marginBottom: '18px',
     },
     h2: {
-        fontSize: '20px',
+        fontSize: '22px',
         fontWeight: '600',
         color: '#1a1a1a',
-        marginTop: '32px',
-        marginBottom: '12px',
+        marginTop: '36px',
+        marginBottom: '14px',
     },
     h3: {
-        fontSize: '17px',
+        fontSize: '18px',
         fontWeight: '600',
         color: '#333',
-        marginTop: '24px',
-        marginBottom: '8px',
+        marginTop: '28px',
+        marginBottom: '10px',
     },
     ul: {
-        marginBottom: '16px',
-        paddingLeft: '20px',
+        marginBottom: '18px',
+        paddingLeft: '24px',
     },
     li: {
         fontSize: '16px',
-        marginBottom: '8px',
+        marginBottom: '10px',
     },
     connections: {
-        marginTop: '40px',
-        paddingTop: '24px',
+        marginTop: '48px',
+        paddingTop: '28px',
         borderTop: '1px solid #e0e0e0',
     },
     connectionsTitle: {
@@ -193,24 +206,27 @@ const styles = {
         fontWeight: '600',
         color: '#666',
         letterSpacing: '0.05em',
+        marginBottom: '8px',
+    },
+    connectionsHint: {
+        fontSize: '12px',
+        color: '#999',
         marginBottom: '16px',
     },
     linkGrid: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '10px',
     },
     linkBtn: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: '12px 16px',
+        padding: '14px 18px',
         background: '#fff',
         border: '1px solid',
-        borderRadius: '6px',
-        cursor: 'pointer',
+        borderRadius: '8px',
         textAlign: 'left',
-        transition: 'all 0.15s ease',
     },
     linkCategory: {
         fontSize: '10px',
@@ -220,7 +236,7 @@ const styles = {
         marginBottom: '4px',
     },
     linkTitle: {
-        fontSize: '14px',
+        fontSize: '15px',
         fontWeight: '500',
         color: '#1a1a1a',
     },

@@ -19,6 +19,10 @@ export const useStore = create((set) => ({
   // Input State
   isTerminalFocused: false,
 
+  // Camera Animation State
+  isCameraAnimating: false,
+  showArticle: false,
+
   addFile: (file) => set((state) => {
     const newCollected = new Set(state.collectedFiles)
     newCollected.add(file.name)
@@ -40,4 +44,8 @@ export const useStore = create((set) => ({
 
   // Input Actions
   setTerminalFocus: (focused) => set({ isTerminalFocused: focused }),
+
+  // Camera Animation Actions
+  setCameraAnimating: (animating) => set({ isCameraAnimating: animating }),
+  setShowArticle: (show) => set({ showArticle: show }),
 }))
