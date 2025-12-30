@@ -2,6 +2,37 @@
 // Each post connects to related concepts rhizomatically
 
 export const blogPosts = [
+    // === CULTURE (Art Installations) ===
+    {
+        id: 'listening-post',
+        title: 'Listening Post',
+        excerpt: 'An immersive art installation inspired by the 2001 work by Mark Hansen and Ben Rubin. Walk through a virtual space filled with glowing VFD screens displaying fragments of human communication.',
+        content: `Listening Post is a first-person exploration of a virtual art installation.
+
+## About the Original
+
+The original Listening Post (2001-2002) by Mark Hansen and Ben Rubin was a dynamic audio-visual installation that culled text fragments from thousands of internet chat rooms, bulletin boards, and public forums in real-time.
+
+The text was read by a voice synthesizer and displayed across a suspended grid of more than 200 small electronic screens.
+
+## This Virtual Recreation
+
+Walk through a dark space surrounded by glowing screens. Fragments of human communication scroll past—simple phrases that capture moments of connection, loneliness, and presence.
+
+WASD to walk. Mouse to look around. Listen.
+
+## Controls
+
+- **WASD** - Walk around the space
+- **Mouse** - Look around
+- **ESC** - Release mouse cursor
+- **Click** - Enter the installation`,
+        category: 'culture',
+        level: 1,
+        connections: ['what-is-computer', 'io-basics'],
+        installationUrl: '/listening-post.html'
+    },
+
     // === FUNDAMENTALS (Level 0 - Center) ===
     {
         id: 'what-is-computer',

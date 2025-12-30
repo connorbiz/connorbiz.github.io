@@ -31,6 +31,7 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
         'software': '#F5FFF5',         // mint white
         'networking': '#FFF5FA',       // pink white
         'memory': '#FAF5FF',           // lavender white
+        'culture': '#F0FFFF',          // cyan white
         'default': '#FFFFFF'           // pure white
     }
 
@@ -40,6 +41,7 @@ export function BlogNode({ position, title, excerpt, category, nodeId, onNavigat
         'software': '#7AB97A',         // green
         'networking': '#B97A9E',       // pink
         'memory': '#9E7AB9',           // purple
+        'culture': '#00CED1',          // dark cyan
         'default': '#888888'
     }
 

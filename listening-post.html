@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listening Post - First Person Exploration</title>
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; bottom: 20px; left: 20px; color: #00ffd2; pointer-events: none; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; z-index: 5; }
+        #instructions { position: absolute; top: 20px; right: 20px; color: #00ffd2; text-align: right; font-size: 10px; line-height: 1.5; }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #00ffd2; cursor: pointer; z-index: 10; font-size: 24px; letter-spacing: 5px;
+        }
+        #overlay span { font-size: 12px; letter-spacing: 2px; margin-top: 20px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        CLICK TO ENTER
+        <span>WASD to Walk | MOUSE to Look</span>
+    </div>
+    <div id="ui">LISTENING POST | <span id="mode-name">STANDBY</span></div>
+    <div id="instructions">ESC TO UNLOCK MOUSE</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Configuration ---
+        const ROWS = 7;
+        const COLS = 21;
+        const VFD_COLOR = '#00ffd2';
+        const PHRASES = ["i am here", "is anyone there?", "i love you", "it is raining", "help me", "don't go", "hello world", "the sky is dark", "searching...", "lost connection", "waiting", "just woke up", "the wind is cold", "can you hear me?", "transmission received"];
+
+        // --- Audio Logic ---
+        let audioCtx;
+        let isAudioStarted = false;
+        function initAudio() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); isAudioStarted = true; }
+        function playPing(freq = 440, vol = 0.05) {
+            if (!isAudioStarted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        }
+        function speak(text) {
+            if (!isAudioStarted) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.75; utterance.pitch = 0.1; utterance.volume = 0.4;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- Scene & Camera ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.08); // Add atmosphere depth
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.6, 8); // Start at human height
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- Controls (WASD + PointerLock) ---
+        const controls = new PointerLockControls(camera, document.body);
+        const moveState = { forward: false, backward: false, left: false, right: false };
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.code) {
+                case 'KeyW': moveState.forward = true; break;
+                case 'KeyA': moveState.left = true; break;
+                case 'KeyS': moveState.backward = true; break;
+                case 'KeyD': moveState.right = true; break;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            switch (e.code) {
+                case 'KeyW': moveState.forward = false; break;
+                case 'KeyA': moveState.left = false; break;
+                case 'KeyS': moveState.backward = false; break;
+                case 'KeyD': moveState.right = false; break;
+            }
+        });
+
+        // --- Post Processing ---
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.4, 0.4, 0.85);
+        bloom.threshold = 0.05;
+        composer.addPass(bloom);
+
+        // --- Grid Generation ---
+        const screens = [];
+        const screenGeometry = new THREE.PlaneGeometry(0.55, 0.22);
+
+        class VFDScreen {
+            constructor(row, col) {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = 128; this.canvas.height = 32;
+                this.ctx = this.canvas.getContext('2d');
+                this.texture = new THREE.CanvasTexture(this.canvas);
+                const material = new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, side: THREE.DoubleSide });
+                this.mesh = new THREE.Mesh(screenGeometry, material);
+
+                // Concave Curvature (Shallow)
+                const angle = (col - (COLS / 2)) * 0.06;
+                const radius = 12;
+                this.mesh.position.set(Math.sin(angle) * radius, (row - (ROWS / 2)) * 0.4 + 1.6, (1 - Math.cos(angle)) * radius);
+                this.mesh.rotation.y = -angle;
+
+                this.text = "";
+                this.speed = Math.random() * 1.5 + 1.0;
+            }
+            updateText(newText, silent = false) {
+                this.text = newText.toUpperCase();
+                if (!silent) playPing(800 + Math.random() * 1500, 0.03);
+            }
+            draw(time) {
+                this.ctx.clearRect(0, 0, 128, 32);
+                this.ctx.fillStyle = 'rgba(0, 30, 30, 0.2)';
+                this.ctx.fillRect(0, 0, 128, 32);
+                this.ctx.font = 'bold 15px monospace';
+                this.ctx.fillStyle = VFD_COLOR;
+                const textWidth = this.ctx.measureText(this.text).width;
+                const xPos = 128 - ((time * this.speed * 40) % (textWidth + 128));
+                this.ctx.fillText(this.text, xPos, 22);
+                this.texture.needsUpdate = true;
+            }
+        }
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const s = new VFDScreen(r, c);
+                scene.add(s.mesh);
+                screens.push(s);
+            }
+        }
+
+        // --- Floor ---
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        // --- Interaction Logic ---
+        let mode = 'RANDOM';
+        const modeLabel = document.getElementById('mode-name');
+
+        function cycleContent() {
+            if (!controls.isLocked) return;
+            if (Math.random() > 0.94) {
+                mode = 'SYNC';
+                modeLabel.innerText = 'SYNCHRONIZED_WAVE';
+                const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+                playPing(110, 0.15);
+                speak(phrase);
+                screens.forEach((s, i) => setTimeout(() => s.updateText(phrase, true), i * 15));
+                setTimeout(() => { mode = 'RANDOM'; modeLabel.innerText = 'RANDOM_CHATTER'; }, 6000);
+            } else if (mode === 'RANDOM') {
+                const randomIdx = Math.floor(Math.random() * screens.length);
+                const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+                screens[randomIdx].updateText(phrase);
+                if (Math.random() > 0.97) speak(phrase);
+            }
+        }
+
+        document.getElementById('overlay').addEventListener('click', () => {
+            controls.lock();
+            if (!isAudioStarted) {
+                initAudio();
+                setInterval(cycleContent, 400);
+            }
+        });
+
+        controls.addEventListener('lock', () => { document.getElementById('overlay').style.display = 'none'; });
+        controls.addEventListener('unlock', () => { document.getElementById('overlay').style.display = 'flex'; });
+
+        // --- Main Loop ---
+        let prevTime = performance.now();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            if (controls.isLocked) {
+                // Movement damping logic
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveState.forward) - Number(moveState.backward);
+                direction.x = Number(moveState.right) - Number(moveState.left);
+                direction.normalize();
+
+                if (moveState.forward || moveState.backward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveState.left || moveState.right) velocity.x -= direction.x * 100.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                // Keep viewer on ground
+                camera.position.y = 1.6;
+            }
+
+            screens.forEach(s => s.draw(time * 0.001));
+            composer.render();
+            prevTime = time;
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

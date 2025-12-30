@@ -39,6 +39,7 @@ export function ArticleView() {
         'software': '#7AB97A',
         'networking': '#B97A9E',
         'memory': '#9E7AB9',
+        'culture': '#00CED1',
         'default': '#888888'
     }
 
@@ -64,6 +65,18 @@ export function ArticleView() {
                 {/* Title */}
                 <h1 style={styles.title}>{post.title}</h1>
 
+                {/* Launch Installation Button */}
+                {post.installationUrl && (
+                    <a
+                        href={post.installationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{...styles.launchBtn, backgroundColor: accentColor}}
+                    >
+                        ENTER INSTALLATION
+                    </a>
+                )}
+
                 {/* Content */}
                 <div style={styles.content}>
                     {post.content ? (
@@ -78,9 +91,21 @@ export function ArticleView() {
                                 const items = para.split('\n').filter(l => l.startsWith('- '))
                                 return (
                                     <ul key={i} style={styles.ul}>
-                                        {items.map((item, j) => (
-                                            <li key={j} style={styles.li}>{item.slice(2)}</li>
-                                        ))}
+                                        {items.map((item, j) => {
+                                            // Handle bold text in list items
+                                            const text = item.slice(2)
+                                            if (text.includes('**')) {
+                                                const parts = text.split(/\*\*/)
+                                                return (
+                                                    <li key={j} style={styles.li}>
+                                                        {parts.map((part, k) =>
+                                                            k % 2 === 1 ? <strong key={k}>{part}</strong> : part
+                                                        )}
+                                                    </li>
+                                                )
+                                            }
+                                            return <li key={j} style={styles.li}>{text}</li>
+                                        })}
                                     </ul>
                                 )
                             }
@@ -135,6 +160,21 @@ const styles = {
     },
     article: {
         padding: '32px 32px',
+    },
+    launchBtn: {
+        display: 'block',
+        width: '100%',
+        padding: '16px 24px',
+        marginBottom: '24px',
+        color: '#fff',
+        textAlign: 'center',
+        textDecoration: 'none',
+        fontSize: '13px',
+        fontWeight: '600',
+        letterSpacing: '0.1em',
+        borderRadius: '8px',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     },
     header: {
         display: 'flex',
